@@ -5,6 +5,8 @@
 bool estado_serial = false, pedir_serial, ok;
 QByteArray lectura;
 
+//testing?
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
