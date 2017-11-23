@@ -111,14 +111,16 @@ void MainWindow::Serial_Recibir_manual()
 
 void MainWindow::Serial_Recibir_auto()
 {
-    qDebug() << "recibido";
-    QByteArray dato;
-    dato.append(serial->read(2).toHex().toUpper());
-    qDebug() << dato;
-    ui->labeldatocompleto->setText(dato);
-    //insertarDatos();
-    //mostrarDatos();
-    out << dato.toInt(&ok,16) << "\n";
+    if(serial->bytesAvailable() >= 2){
+        qDebug() << "recibido";
+        QByteArray dato;
+        dato.append(serial->read(2).toHex().toUpper());
+        qDebug() << dato;
+        ui->labeldatocompleto->setText(dato);
+        //insertarDatos();
+        //mostrarDatos();
+        out << dato.toInt(&ok,16) << "\n";
+    }
     ui->progressBarrecibir->setValue(j);
     j++;
     if(j > 99)
