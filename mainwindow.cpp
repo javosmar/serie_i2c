@@ -1,11 +1,13 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <QDebug>
+#include <QFile>
 
 bool estado_serial = false, pedir_serial, ok;
 QByteArray lectura;
-
-//testing?
+int i = 0, j = 0;
+QFile file("out.txt");
+QTextStream out(&file);
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -13,12 +15,31 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     serial = new QSerialPort(this);
-    //Serial_Conf();
-    connect(serial,SIGNAL(readyRead()),this,SLOT(Serial_Recibir()));
+    connect(serial,SIGNAL(readyRead()),this,SLOT(Serial_Recibir_auto()));
     foreach (const QSerialPortInfo &info, QSerialPortInfo::availablePorts()){
             ui->comboBoxserie->insertItem(0,info.portName());
     }
     ui->pushButtondesconectar->setEnabled(false);
+
+    //-----------base de datos
+    qDebug() << "Iniciado";
+    QString nombre;
+    nombre.append("base_datos_test.sqlite");
+    db = QSqlDatabase::addDatabase("QSQLITE");
+    db.setDatabaseName(nombre);
+    if(db.open()){
+        qDebug() << "base de datos iniciada";
+    }
+    else{
+        qDebug() << "error al abrir base de datos";
+    }
+
+    crearTablaDatos();
+    //mostrarDatos();
+    //---------fin base de datos
+    //QFile file("out.txt");
+    //QTextStream out(&file);
+    //out << "The magic number is: " << 49 << "\n";
 }
 
 MainWindow::~MainWindow()
@@ -43,9 +64,17 @@ void MainWindow::Serial_Conect()
         estado_serial = true;
         ui->comboBoxserie->setEnabled(false);
         ui->pushButtondesconectar->setEnabled(true);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+            return;
+        else
+            qDebug() << "txt creado con éxito";
+
     }
     else
+    {
         Serial_Error();
+        file.close();
+    }
 }
 
 void MainWindow::Serial_Desconect()
@@ -54,6 +83,8 @@ void MainWindow::Serial_Desconect()
     estado_serial = false;
     ui->comboBoxserie->setEnabled(true);
     ui->pushButtondesconectar->setEnabled(false);
+    file.close();
+    qDebug() << "archivo cerrado";
 }
 
 void MainWindow::Serial_Error()
@@ -64,9 +95,34 @@ void MainWindow::Serial_Error()
     error.exec();
 }
 
-void MainWindow::Serial_Recibir()
+void MainWindow::Serial_Recibir_manual()
 {
+    qDebug() << "recibido";
+    QByteArray dato;
+    dato.append(serial->read(2).toHex().toUpper());
+    qDebug() << dato;
+    ui->labeldatocompleto->setText(dato);
+    if(dato.contains("FE"))
+        qDebug() << "acaaaaaaaaaaaaaaaaaaaaa";
+    insertarDatos();
+    mostrarDatos();
+    out << dato.toInt(&ok,16) << "\n";
+}
 
+void MainWindow::Serial_Recibir_auto()
+{
+    qDebug() << "recibido";
+    QByteArray dato;
+    dato.append(serial->read(2).toHex().toUpper());
+    qDebug() << dato;
+    ui->labeldatocompleto->setText(dato);
+    //insertarDatos();
+    //mostrarDatos();
+    out << dato.toInt(&ok,16) << "\n";
+    ui->progressBarrecibir->setValue(j);
+    j++;
+    if(j > 99)
+        j = 0;
 }
 
 void MainWindow::on_comboBoxserie_activated(const QString &arg1)
@@ -92,4 +148,61 @@ void MainWindow::on_pushButtonenviar_clicked()
     qDebug() << "enviado";
     ui->labelregistro->setText(ui->lineEditregistro->text());
     ui->labeldato->setText(ui->lineEditdato->text());
+}
+
+void MainWindow::crearTablaDatos()
+{
+    QString consulta;
+    consulta.append("CREATE TABLE IF NOT EXISTS sensor("
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    "dato VARCHAR(10)"
+                    ");");
+    QSqlQuery crear;
+    crear.prepare(consulta);
+    if(crear.exec()){
+        qDebug() << "tabla creada correctamente";
+    }
+    else{
+        qDebug() << "ERROR! " << crear.lastError();
+    }
+}
+
+void MainWindow::insertarDatos()
+{
+    QString consulta;
+    consulta.append("INSERT INTO sensor("
+                    "dato)"
+                    "VALUES("
+                    "'"+ui->labeldatocompleto->text()+"'"      //añadir el dato
+                    ");"); 
+    QSqlQuery insertar;
+    insertar.prepare(consulta);
+    if(insertar.exec()){
+        qDebug() << "dato agregado con éxito";
+    }
+    else{
+        qDebug() << "ERROR! " << insertar.lastError();
+    }
+}
+
+void MainWindow::mostrarDatos()
+{
+    QString consulta;
+    consulta.append("SELECT * FROM sensor");
+    QSqlQuery mostrar;
+    mostrar.prepare(consulta);
+    if(mostrar.exec()){
+        qDebug() << "consulta realizada con éxito";
+    }
+    else{
+        qDebug() << "ERROR! " << mostrar.lastError();
+    }
+
+    int fila = 0;
+    ui->tableWidgetdato->setRowCount(0);
+    while(mostrar.next()){
+        ui->tableWidgetdato->insertRow(fila);
+        ui->tableWidgetdato->setItem(fila,0,new QTableWidgetItem(mostrar.value(1).toByteArray().constData()));
+        fila++;
+    }
 }
