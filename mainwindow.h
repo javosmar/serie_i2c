@@ -27,6 +27,11 @@ public:
     void crearTablaDatos();
     void insertarDatos();
     void mostrarDatos();
+    //----PLOT.-----
+    void addPoint(double x, double y);
+    void clearData();
+    void plot();
+    //--------------
 
 private slots:
     //------serial-----
@@ -41,10 +46,16 @@ private slots:
     void on_pushButtondesconectar_clicked();
     void on_pushButtonenviar_clicked();
 
+    void on_pushButton_clicked();
+
+    void on_pushButton_ejes_clicked();
+
 private:
     Ui::MainWindow *ui;
     QSerialPort *serial;
     QSqlDatabase db;
+
+    QVector<double> qv_x, qv_y;
 };
 
 #endif // MAINWINDOW_H

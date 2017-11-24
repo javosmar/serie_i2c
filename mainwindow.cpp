@@ -6,6 +6,7 @@
 bool estado_serial = false, pedir_serial, ok;
 QByteArray lectura;
 int i = 0, j = 0;
+double contador = 0;
 QFile file("out.txt");
 QTextStream out(&file);
 
@@ -20,6 +21,14 @@ MainWindow::MainWindow(QWidget *parent) :
             ui->comboBoxserie->insertItem(0,info.portName());
     }
     ui->pushButtondesconectar->setEnabled(false);
+
+    //----PLOT-----
+    ui->plot->addGraph();
+    ui->plot->graph(0)->setScatterStyle(QCPScatterStyle::ssCircle);
+    ui->plot->graph(0)->setLineStyle(QCPGraph::lsNone);
+    ui->plot->xAxis->setRange(ui->spinBox_xmin->value(),ui->spinBox_xmax->value());
+    ui->plot->yAxis->setRange(ui->spinBox_ymin->value(),ui->spinBox_ymax->value());
+    //-------------
 
     //-----------base de datos
     qDebug() << "Iniciado";
@@ -112,6 +121,7 @@ void MainWindow::Serial_Recibir_manual()
 void MainWindow::Serial_Recibir_auto()
 {
     if(serial->bytesAvailable() >= 2){
+        contador++;
         qDebug() << "recibido";
         QByteArray dato;
         dato.append(serial->read(2).toHex().toUpper());
@@ -119,7 +129,17 @@ void MainWindow::Serial_Recibir_auto()
         ui->labeldatocompleto->setText(dato);
         //insertarDatos();
         //mostrarDatos();
-        out << dato.toInt(&ok,16) << "\n";
+        int entero = dato.toInt(&ok,16);
+        qDebug() << entero;
+        //int entero2 = dato.toDouble();
+        //qDebug() << entero2;
+        out << entero << "\n";
+        addPoint(contador, entero);
+        plot();
+        if(contador > ui->spinBox_xmax->value()){
+            contador = 0;
+            clearData();
+        }
     }
     ui->progressBarrecibir->setValue(j);
     j++;
@@ -207,4 +227,36 @@ void MainWindow::mostrarDatos()
         ui->tableWidgetdato->setItem(fila,0,new QTableWidgetItem(mostrar.value(1).toByteArray().constData()));
         fila++;
     }
+}
+
+void MainWindow::addPoint(double x, double y)
+{
+    qv_x.append(x);
+    qv_y.append(y);
+}
+
+void MainWindow::clearData()
+{
+    qv_x.clear();
+    qv_y.clear();
+}
+
+void MainWindow::plot()
+{
+    ui->plot->graph(0)->setData(qv_x, qv_y);
+    ui->plot->replot();
+    ui->plot->update();
+}
+
+void MainWindow::on_pushButton_clicked()
+{
+    clearData();
+    plot();
+    contador = 0;
+}
+
+void MainWindow::on_pushButton_ejes_clicked()
+{
+    ui->plot->xAxis->setRange(ui->spinBox_xmin->value(),ui->spinBox_xmax->value());
+    ui->plot->yAxis->setRange(ui->spinBox_ymin->value(),ui->spinBox_ymax->value());
 }
