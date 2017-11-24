@@ -5,7 +5,7 @@
 
 bool estado_serial = false, pedir_serial, ok;
 QByteArray lectura;
-int i = 0, j = 0;
+int i = 0, j = 0, maximoX = 399;
 double contador = 0;
 QFile file("out.txt");
 QTextStream out(&file);
@@ -136,7 +136,7 @@ void MainWindow::Serial_Recibir_auto()
         out << entero << "\n";
         addPoint(contador, entero);
         plot();
-        if(contador > ui->spinBox_xmax->value()){
+        if(contador > maximoX){//ui->spinBox_xmax->value()){
             contador = 0;
             clearData();
         }
@@ -259,4 +259,5 @@ void MainWindow::on_pushButton_ejes_clicked()
 {
     ui->plot->xAxis->setRange(ui->spinBox_xmin->value(),ui->spinBox_xmax->value());
     ui->plot->yAxis->setRange(ui->spinBox_ymin->value(),ui->spinBox_ymax->value());
+    maximoX = ui->spinBox_xmax->value();
 }
